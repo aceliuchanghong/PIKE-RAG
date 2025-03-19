@@ -105,7 +105,6 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
 .venv
 env/
 venv/
@@ -145,3 +144,4 @@ env_configs/
 data/
 logs/
 00.md
+no_git_oic/
