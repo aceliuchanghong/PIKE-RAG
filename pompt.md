@@ -1,5 +1,10 @@
 提示词
 
+```
+pip install easy-media-utils openai python-dotenv termcolor uv
+pip install haystack-ai
+pip install python-docx python-pptx spacy
+```
 
 ---
 

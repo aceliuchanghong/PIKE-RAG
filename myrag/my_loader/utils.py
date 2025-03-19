@@ -29,10 +29,10 @@ import sys
 
 sys.path.insert(
     0,
-    os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../")),
+    os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../")),
 )
 
-from document_loaders.common import DocumentType
+from myrag.my_loader.common import DocumentType
 
 
 def is_pdf_readable(file_path: str) -> bool:
@@ -101,7 +101,7 @@ def get_loader(file_path: str):
 
 if __name__ == "__main__":
     """
-    uv run document_loaders/utils.py
+    uv run myrag/my_loader/utils.py
     """
     file_path = "no_git_oic/test_files/IMDB-Movie-Data.csv"
     file_path = "no_git_oic/test_files/8af0caa2d85618671dbcd392771dc086ef6aba991f11e40b124514f11deed8e9/流式细胞制备方案.pdf"
@@ -122,5 +122,6 @@ if __name__ == "__main__":
         )
         documents = results["documents"]
         print(documents)
+        print(documents[0].content)
     else:
         print("无法识别文件类型")
