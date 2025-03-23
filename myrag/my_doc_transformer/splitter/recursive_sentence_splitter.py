@@ -6,6 +6,7 @@ import logging
 from termcolor import colored
 from datetime import datetime
 import sys
+from haystack import Document
 
 load_dotenv()
 log_level = os.getenv("LOG_LEVEL", "INFO").upper()
