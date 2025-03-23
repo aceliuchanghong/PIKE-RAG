@@ -104,12 +104,12 @@ if __name__ == "__main__":
     uv run myrag/my_loader/utils.py
     """
     file_path = "no_git_oic/test_files/IMDB-Movie-Data.csv"
-    file_path = "no_git_oic/test_files/8af0caa2d85618671dbcd392771dc086ef6aba991f11e40b124514f11deed8e9/流式细胞制备方案.pdf"
-    file_path = "no_git_oic/test_files/RAI_TRANSPARENCY.md"
-    file_path = "no_git_oic/test_files/AI应用培训01_V2.1_0228.pptx"
-    file_path = "no_git_oic/test_files/test_excel.xlsx"
-    file_path = "no_git_oic/test_files/三国演义.docx"
-    file_path = "no_git_oic/test_files/linux环境安装代理VPN的步骤.txt"
+    # file_path = "no_git_oic/test_files/流式细胞制备方案.pdf"
+    # file_path = "no_git_oic/test_files/RAI_TRANSPARENCY.md"
+    # file_path = "no_git_oic/test_files/AI应用培训01_V2.1_0228.pptx"
+    # file_path = "no_git_oic/test_files/test_excel.xlsx"
+    # file_path = "no_git_oic/test_files/三国演义.docx"
+    # file_path = "no_git_oic/test_files/linux环境安装代理VPN的步骤.txt"
 
     doc_type = infer_file_type(file_path)
     if doc_type:

@@ -3,7 +3,7 @@
 ```
 pip install easy-media-utils openai python-dotenv termcolor uv
 pip install haystack-ai
-pip install python-docx python-pptx spacy
+pip install python-docx python-pptx spacy openpyxl pandas markdown-it-py mdit_plain pdfplumber
 ```
 
 ---

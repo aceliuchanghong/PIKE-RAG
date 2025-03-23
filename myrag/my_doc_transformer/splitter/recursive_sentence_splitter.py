@@ -1,12 +1,15 @@
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 from dotenv import load_dotenv
 import logging
 from termcolor import colored
 from datetime import datetime
 import sys
 from haystack import Document
+import spacy
+from tqdm import tqdm
+from copy import deepcopy
 
 load_dotenv()
 log_level = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -24,7 +27,7 @@ sys.path.insert(
     ),
 )
 
-from myrag.my_loader.common import DocumentType
+from myrag.my_loader.utils import get_loader
 
 """
 https://spacy.io/models/zh
@@ -34,12 +37,122 @@ pip install no_git_oic/spacy/en_core_web_sm-3.8.0-py3-none-any.whl
 pip install /path/to/en_core_web_lg-3.8.0.tar.gz
 pip install /path/to/zh_core_web_lg-3.8.0.tar.gz
 """
-if __name__ == "__main__":
-    import spacy
 
+LANG2MODELNAME = {
+    "en": "zh_core_web_sm",
+    "zh": "zh_core_web_sm",
+}
+
+
+class RecursiveSentenceSplitter:
+    NAME = "RecursiveSentenceSplitter"
+
+    def __init__(
+        self,
+        lang: str = "zh",
+        nlp_max_len: int = 4000000,
+        num_parallel: int = 4,
+        chunk_size: int = 12,
+        chunk_overlap: int = 4,
+        **kwargs,
+    ):
+        """
+        Args:
+            lang (str):  "zh" for Chinese. "en" for English
+            chunk_size (int): number of sentences per chunk.
+            chunk_overlap (int): number of sentence overlap between two continuous chunks.
+        """
+        self._chunk_overlap = chunk_overlap
+        self._chunk_size: int = chunk_size
+        self._stride: int = self._chunk_size - self._chunk_overlap
+        self._num_parallel: int = num_parallel
+
+        self._load_model(lang, nlp_max_len)
+
+    def _load_model(self, language: str, nlp_max_len: int) -> None:
+        assert (
+            language in LANG2MODELNAME
+        ), f"Spacy model not specified for language: {language}."
+
+        model_name = LANG2MODELNAME[language]
+        try:
+            self._nlp = spacy.load(model_name)
+        except:
+            raise ValueError(
+                f"Spacy model not found for language: {language}. Please install it first."
+            )
+        self._nlp.max_length = nlp_max_len
+
+    def _nlp_doc_to_texts(self, doc: spacy.tokens.Doc) -> List[str]:
+        sents = [sent.text.strip() for sent in doc.sents]
+        sents = [sent for sent in sents if len(sent) > 0]
+
+        segments: List[str] = []
+        for i in range(0, len(sents), self._stride):
+            segment = " ".join(sents[i : i + self._chunk_size])
+            segments.append(segment)
+            if i + self._chunk_size >= len(sents):
+                break
+
+        return segments
+
+    def split_text(self, text: str) -> List[str]:
+        doc = self._nlp(text)
+        segments = self._nlp_doc_to_texts(doc)
+        return segments
+
+    def create_documents(
+        self, texts: List[str], metadatas: Optional[List[dict]] = None
+    ) -> List[Document]:
+        _metadatas = metadatas or [{}] * len(texts)
+        documents = []
+        pbar = tqdm(total=len(texts), desc="Splitting texts by sentences")
+        num_workers = min(len(texts), self._num_parallel)
+        for idx, doc in enumerate(
+            self._nlp.pipe(texts, n_process=num_workers, batch_size=32)
+        ):
+            segments = self._nlp_doc_to_texts(doc)
+            for segment in segments:
+                documents.append(
+                    Document(content=segment, meta=deepcopy(_metadatas[idx]))
+                )
+            pbar.update(1)
+        pbar.close()
+
+        return documents
+
+
+if __name__ == "__main__":
     """
     uv run myrag/my_doc_transformer/splitter/recursive_sentence_splitter.py
     """
-    nlp_sm = spacy.load("zh_core_web_sm")
-    doc_sm = nlp_sm("这是一个测试句子。")
-    print([(token.text, token.pos_, token.dep_) for token in doc_sm])
+    # nlp_sm = spacy.load("zh_core_web_sm")
+    # doc_sm = nlp_sm("这是一个测试句子。")
+    # print([(token.text, token.pos_, token.dep_) for token in doc_sm])
+
+    file_path = "no_git_oic/test_files/linux环境安装代理VPN的步骤.txt"
+    converter = get_loader(file_path)
+    results = converter.run(
+        sources=[file_path],
+        meta={"date_added": datetime.now().isoformat()},
+    )
+    documents = results["documents"]
+
+    splitter = RecursiveSentenceSplitter(
+        lang="zh",  # 设置语言为中文
+        chunk_size=12,  # 每个块包含12个句子
+        chunk_overlap=4,  # 相邻块之间重叠4个句子
+    )
+    segments = splitter.split_text(documents[0].content)
+    print("\nSegments:")
+    for i, segment in enumerate(segments):
+        print(f"\nSegment {i+1}:")
+        print(segment)
+
+    texts = [documents[0].content]
+    meta = [documents[0].meta]
+    documents = splitter.create_documents(texts=texts, metadatas=meta)
+    for i, doc in enumerate(documents):
+        print(f"\n文档 {i+1}:")
+        print(f"内容: {doc.content}")
+        print(f"元数据: {doc.meta}")
