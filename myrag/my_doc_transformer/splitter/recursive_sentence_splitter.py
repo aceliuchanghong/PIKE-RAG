@@ -39,8 +39,8 @@ pip install /path/to/zh_core_web_lg-3.8.0.tar.gz
 """
 
 LANG2MODELNAME = {
-    "en": "zh_core_web_sm",
-    "zh": "zh_core_web_sm",
+    "en": "zh_core_web_lg",
+    "zh": "zh_core_web_lg",
 }
 
 

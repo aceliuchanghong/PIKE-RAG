@@ -222,7 +222,7 @@ def split_documents(文档列表):
 
 ---
 
-`pikerag`里面`filter`程序,有`llm_powered_filter
+`pikerag`里面`filter`程序,有`llm_powered_filter`
 帮我用中文的伪代码形式帮我给出讲解里面核心的部分怎么实现的,
 帮我在00.md给出详细的说明
 1. 核心实现原理
@@ -265,30 +265,123 @@ class LLMPoweredFilter:
 
 ---
 
+`pikerag`里面处理文档分割程序,有`recursive_sentence_splitter`,已经本地化到了`myrag/my_doc_transformer/splitter/recursive_sentence_splitter`了,帮我把`pikerag`下面的`llm_powered_recursive_splitter`也创建本地化版本,保持核心逻辑不变但简化配置。
+
+---
+
+`pikerag`里面处理文档分割程序,有`llm_powered_recursive_splitter`
+他怎么执行调用,给一个例子和中文说明,其对应函数说明也写一下伪代码
 
 
 ---
 
+```python
+splitter = LLMPoweredRecursiveSplitter(
+    base_splitter=RecursiveSentenceSplitter(),  # 基础分割器
+    llm=llm_client  # LLM客户端
+)
+
+documents = [Document(page_content="长文本内容...", metadata={"source":"test.txt"})]
+chunks = splitter.split_documents(documents)
+```
+```python
+def split_documents(documents):
+    结果文档列表 = []
+    for 文档 in documents:
+        文本 = 文档.内容
+        元数据 = 文档.元数据
+        
+        # 获取第一块的摘要
+        当前摘要 = 获取首块摘要(文本)
+        
+        # 使用基础分割器分块
+        块列表 = 基础分割器.分割(文本)
+        
+        while True:
+            if 只有一块:
+                # 处理最后一块
+                最终摘要 = 获取末块摘要(块列表[0], 当前摘要)
+                添加文档块(块列表[0], 最终摘要)
+                break
+            else:
+                # 重新分割第一块并生成摘要
+                新块, 当前摘要, 下一摘要 = 智能重分割(文本, 块列表, 当前摘要)
+                添加文档块(新块, 当前摘要)
+                
+                # 更新剩余文本信息
+                文本 = 剩余文本
+                当前摘要 = 下一摘要
+                块列表 = 基础分割器.分割(文本)
+    
+    return 结果文档列表
+```
+
+---
+
+`pikerag`里面过滤器程序,有`llm_powered_filter`
+他怎么执行调用,给一个例子和中文说明,其对应函数说明也写一下伪代码
 
 
 ---
 
+```python
+filter = LLMPoweredFilter(
+    llm_client=llm_client,  # LLM客户端
+    filter_protocol=filter_protocol  # 过滤协议
+)
+
+# 输入文档列表
+documents = [Document(page_content="文档内容...", metadata={"source":"test.txt"})]
+
+# 执行过滤,keep_unrelated=False表示只保留相关文档
+filtered_docs = filter.transform_documents(documents, keep_unrelated=False)
+```
+
+```python
+def transform_documents(documents, keep_unrelated=False):
+    结果文档列表 = []
+    for 文档 in documents:
+        内容 = 文档.内容
+        元数据 = 文档.元数据
+        
+        # 获取过滤信息
+        过滤信息, 是否相关 = _get_filter_info(内容, **元数据)
+        
+        # 根据keep_unrelated决定是否保留不相关文档
+        if not keep_unrelated and not 是否相关:
+            continue
+            
+        # 更新元数据并添加到结果
+        元数据.update({"filter_info": 过滤信息, "related": 是否相关})
+        结果文档列表.append(文档)
+        
+    return 结果文档列表
+```
+
+---
+
+`pikerag`目录`protocol.py`里面`CommunicationProtocol`
+他有什么用,给一个例子和中文说明,写一下伪代码
 
 
 ---
 
+```python
+# 伪代码示例
+template = MessageTemplate("请回答问题：{question}")
+parser = QAContentParser()
+protocol = CommunicationProtocol(template, parser)
 
+# 处理输入
+messages = protocol.process_input("北京的首都在哪里？")
+# 输出：[{"role": "user", "content": "请回答问题：北京的首都在哪里？"}]
 
----
-
-
-
----
-
-
-
----
-
+# 假设获得了LLM的响应
+response = "北京就是中国的首都"
+# 解析输出
+result = protocol.parse_output(response)
+# 输出：{"answer": "北京就是中国的首都", "confidence": 0.9}
+```
 
 
 ---
