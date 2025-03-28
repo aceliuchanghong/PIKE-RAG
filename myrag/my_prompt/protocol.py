@@ -60,6 +60,7 @@ if __name__ == "__main__":
     uv run myrag/my_prompt/protocol.py
     """
     template = MessageTemplate(template=[("user", "请回答问题：{content}")])
+    template = MessageTemplate(template=[("system", "请回答问题：{content}")])
     parser = BaseParser()
     protocol = CommunicationProtocol(template, parser)
 
