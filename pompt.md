@@ -14,31 +14,82 @@ pikerag目录下面怎么处理文件的,帮我给出详细的meimaid流程图
 
 ```mermaid
 graph TB
-    subgraph Document_Loaders[文档加载模块]
-        A[文件输入] --> B[common.py]
-        B --> C[文档解析]
-        C --> D[utils.py处理]
+    subgraph PIKE-RAG
+        %% Core Components
+        DL[Document Loaders] --> DT[Document Transformers]
+        DT --> KR[Knowledge Retrievers]
+        KR --> WF[Workflows]
+        LC[LLM Client] --> WF
+        PR[Prompts] --> WF
+        
+        %% Document Loaders Detail
+        subgraph Document Loaders
+            DL_Common[Common]
+            DL_Utils[Utils]
+        end
+        
+        %% Document Transformers Detail
+        subgraph Document Transformers
+            DT_Filter[LLM Powered Filter]
+            DT_Splitter[Recursive Sentence Splitter]
+            DT_Tagger[LLM Powered Tagger]
+        end
+        
+        %% Knowledge Retrievers Detail
+        subgraph Knowledge Retrievers
+            KR_Base[Base QA Retriever]
+            KR_Chroma[Chroma QA Retriever]
+            KR_BM25[BM25 QA Retriever]
+            KR_Atom[Chunk Atom Retriever]
+            KR_Mixins[Chroma/Networkx Mixins]
+        end
+        
+        %% LLM Client Detail
+        subgraph LLM Client
+            LC_Base[Base LLM Client]
+            LC_Azure[Azure OpenAI Client]
+            LC_Meta[Azure/HF Meta Llama Client]
+        end
+        
+        %% Prompts Detail
+        subgraph Prompts
+            PR_Base[Base Parser]
+            PR_Template[Message Template]
+            PR_Protocol[Communication Protocol]
+            PR_QA[QA Prompts]
+            PR_Decomp[Decomposition]
+            PR_IRCoT[IRCoT]
+            PR_SelfAsk[Self Ask]
+            PR_Tagging[Tagging]
+        end
+        
+        %% Workflows Detail
+        subgraph Workflows
+            WF_QA[QA Workflow]
+            WF_Chunking[Chunking Workflow]
+            WF_Tagging[Tagging Workflow]
+            WF_Eval[Evaluation Workflow]
+            WF_Metrics[Evaluation Metrics]
+        end
+        
+        %% Utils
+        UT[Utils] --> DL
+        UT --> DT
+        UT --> KR
+        UT --> WF
+        
+        %% Inheritance Relations
+        LC_Azure --> LC_Base
+        LC_Meta --> LC_Base
+        KR_Chroma --> KR_Base
+        KR_BM25 --> KR_Base
+        KR_Atom --> KR_Base
     end
 
-    subgraph Document_Transformers[文档转换模块]
-        E[文档分割器splitter] --> F[文本过滤filter]
-        F --> G[文档标记tagger]
-    end
-
-    subgraph Knowledge_Retrievers[知识检索模块]
-        H[基础QA检索器] --> I[BM25检索]
-        H --> J[Chroma检索]
-        I --> K[查询解析]
-        J --> K
-        K --> L[检索结果]
-    end
-
-    D --> E
-    G --> H
-
-    style Document_Loaders fill:#f9f,stroke:#333,stroke-width:2px
-    style Document_Transformers fill:#bbf,stroke:#333,stroke-width:2px
-    style Knowledge_Retrievers fill:#bfb,stroke:#333,stroke-width:2px
+    %% Data Flow
+    Doc[Documents] --> DL
+    Query[User Query] --> WF
+    WF --> Answer[Generated Answer]
 ```
 
 ---
