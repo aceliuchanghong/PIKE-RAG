@@ -31,7 +31,8 @@ from haystack import Document
 from myrag.my_doc_transformer.splitter.recursive_sentence_splitter import (
     RecursiveSentenceSplitter,
 )
-from myrag.my_prompt.protocol import CommunicationProtocol
+from myrag.llm_client.base import BaseLLMClient
+from myrag.my_prompt.prompts import *
 
 
 class LLMPoweredRecursiveSplitter:
@@ -39,38 +40,35 @@ class LLMPoweredRecursiveSplitter:
 
     def __init__(
         self,
-        llm_client,
-        first_chunk_summary_protocol: CommunicationProtocol,
-        last_chunk_summary_protocol: CommunicationProtocol,
-        chunk_resplit_protocol: CommunicationProtocol,
+        llm_client: BaseLLMClient,
+        *,
         llm_config: dict = {},
-        chunk_size: int = 4000,
+        chunk_size: int = 1024,
         chunk_overlap: int = 200,
-        length_function: Callable[[str], int] = len,
-        keep_separator: bool = False,
-        add_start_index: bool = False,
-        strip_whitespace: bool = True,
-        **kwargs,
     ) -> None:
 
         self._base_splitter = RecursiveSentenceSplitter()
         self._llm_client = llm_client
-        self._first_chunk_summary_protocol = first_chunk_summary_protocol
-        self._last_chunk_summary_protocol = last_chunk_summary_protocol
-        self._chunk_resplit_protocol = chunk_resplit_protocol
+        self._llm_config = llm_config
 
-    def _get_first_chunk_summary(self, text: str, **kwargs) -> str:
+    def _get_first_chunk_summary(self, text: str) -> str:
         chunks = self._base_splitter.split_text(text)
+        # 直接获取分割后的第一个chunk 可能会丢失原文中chunk前的一些空白字符或特殊格式
         first_chunk_start_pos = text.find(chunks[0])
         text_for_summary = text[: first_chunk_start_pos + len(chunks[0])]
 
-        messages = self._first_chunk_summary_protocol.process_input(
-            content=text_for_summary, **kwargs
+        messages = [
+            {"role": "system", "content": summary_system_prompt},
+            {
+                "role": "user",
+                "content": "Help me summarize the text, only return the summary.\n\nText:\n"
+                + text_for_summary,
+            },
+        ]
+        response = self._llm_client.generate_content_with_messages(
+            messages, **self._llm_config
         )
-        response = self._llm_client.generate_content_with_messages(messages=messages)
-        return self._first_chunk_summary_protocol.parse_output(
-            content=response, **kwargs
-        )
+        return response
 
     def _resplit_chunk_and_generate_summary(
         self,
@@ -176,17 +174,7 @@ if __name__ == "__main__":
     """
     uv run myrag/my_doc_transformer/splitter/llm_powered_recursive_splitter.py
     """
-    import httpx
-
-    proxyHost = "127.0.0.1"
-    proxyPort = 10808
-    http_client = httpx.Client(proxy=f"http://{proxyHost}:{proxyPort}")
-    llm_client = OpenAI(
-        api_key=os.getenv("x_API_KEY"),
-        base_url=os.getenv("x_BASE_URL"),
-        http_client=http_client,
-    )
-
+    llm_client = BaseLLMClient()
     file_path = "no_git_oic/test_files/linux环境安装代理VPN的步骤.txt"
     converter = get_loader(file_path)
     results = converter.run(
@@ -194,6 +182,9 @@ if __name__ == "__main__":
         meta={"date_added": datetime.now().isoformat()},
     )
     documents = results["documents"]
+    logger.info(colored(f"documents:{documents}", "green"))
 
-    splitter = LLMPoweredRecursiveSplitter(llm_client=llm_client)
-    chunks = splitter.split_documents(documents)
+    llm_config = {"re_run": False, "model": "gemma3:27b"}
+    splitter = LLMPoweredRecursiveSplitter(llm_client, llm_config=llm_config)
+    first_chunk_summary = splitter._get_first_chunk_summary(documents[0].content)
+    logger.info(colored(f"{first_chunk_summary}", "green"))

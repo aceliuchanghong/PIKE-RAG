@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 from typing import Optional, List
 from dotenv import load_dotenv
 import logging
@@ -31,16 +30,20 @@ from myrag.my_loader.utils import get_loader
 
 """
 https://spacy.io/models/zh
-pip install no_git_oic/spacy/zh_core_web_sm-3.8.0-py3-none-any.whl
-pip install no_git_oic/spacy/en_core_web_sm-3.8.0-py3-none-any.whl
+uv pip install no_git_oic/whl/zh_core_web_sm-3.8.0-py3-none-any.whl
+uv pip install no_git_oic/whl/en_core_web_sm-3.8.0-py3-none-any.whl
+uv pip install no_git_oic/whl/zh_core_web_trf-3.8.0-py3-none-any.whl
+uv pip install no_git_oic/whl/en_core_web_trf-3.8.0-py3-none-any.whl
 
-pip install /path/to/en_core_web_lg-3.8.0.tar.gz
-pip install /path/to/zh_core_web_lg-3.8.0.tar.gz
+uv pip install /path/to/en_core_web_lg-3.8.0.tar.gz
+uv pip install /path/to/zh_core_web_lg-3.8.0.tar.gz
 """
 
 LANG2MODELNAME = {
-    "en": "zh_core_web_lg",
-    "zh": "zh_core_web_lg",
+    "en": "en_core_web_trf",
+    "zh": "zh_core_web_trf",
+    "en_sm": "en_core_web_sm",
+    "zh_sm": "zh_core_web_sm",
 }
 
 
@@ -50,15 +53,15 @@ class RecursiveSentenceSplitter:
     def __init__(
         self,
         lang: str = "zh",
-        nlp_max_len: int = 4000000,
-        num_parallel: int = 4,
-        chunk_size: int = 12,
+        *,
+        nlp_max_len: int = 400000,
+        num_parallel: int = 8,
+        chunk_size: int = 10,
         chunk_overlap: int = 4,
-        **kwargs,
     ):
         """
         Args:
-            lang (str):  "zh" for Chinese. "en" for English
+            lang (str):  "zh" for Chinese. "en" for English en_sm zh_sm
             chunk_size (int): number of sentences per chunk.
             chunk_overlap (int): number of sentence overlap between two continuous chunks.
         """
@@ -126,9 +129,13 @@ if __name__ == "__main__":
     """
     uv run myrag/my_doc_transformer/splitter/recursive_sentence_splitter.py
     """
-    # nlp_sm = spacy.load("zh_core_web_sm")
-    # doc_sm = nlp_sm("这是一个测试句子。")
-    # print([(token.text, token.pos_, token.dep_) for token in doc_sm])
+    # if not spacy.require_gpu():
+    #     raise RuntimeError(
+    #         "GPU not available or Spacy failed to initialize GPU support."
+    #     )
+    nlp_sm = spacy.load("zh_core_web_trf")
+    doc_sm = nlp_sm("这是一个测试句子。")
+    print([(token.text, token.pos_, token.dep_) for token in doc_sm])
 
     file_path = "no_git_oic/test_files/linux环境安装代理VPN的步骤.txt"
     converter = get_loader(file_path)
@@ -139,20 +146,20 @@ if __name__ == "__main__":
     documents = results["documents"]
 
     splitter = RecursiveSentenceSplitter(
-        lang="zh",  # 设置语言为中文
-        chunk_size=12,  # 每个块包含12个句子
+        "zh",
+        chunk_size=8,  # 每个块包含12个句子
         chunk_overlap=4,  # 相邻块之间重叠4个句子
     )
     segments = splitter.split_text(documents[0].content)
     print("\nSegments:")
     for i, segment in enumerate(segments):
         print(f"\nSegment {i+1}:")
-        print(segment)
+        logger.info(colored(f"{segment}", "green"))
 
     texts = [documents[0].content]
     meta = [documents[0].meta]
     documents = splitter.create_documents(texts=texts, metadatas=meta)
     for i, doc in enumerate(documents):
         print(f"\n文档 {i+1}:")
-        print(f"内容: {doc.content}")
-        print(f"元数据: {doc.meta}")
+        logger.info(colored(f"内容: {doc.content}", "green"))
+        logger.info(colored(f"元数据: {doc.meta}", "light_cyan"))
