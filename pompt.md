@@ -437,6 +437,17 @@ result = protocol.parse_output(response)
 
 ---
 
+```python
+documents = converter.run(
+    sources=[file_path],
+    meta={"date_added": datetime.now().isoformat()},
+)
+```
+
+
+
+
+
 
 
 ---

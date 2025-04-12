@@ -56,7 +56,7 @@ class RecursiveSentenceSplitter:
         *,
         nlp_max_len: int = 400000,
         num_parallel: int = 8,
-        chunk_size: int = 10,
+        chunk_size: int = 12,
         chunk_overlap: int = 4,
     ):
         """
