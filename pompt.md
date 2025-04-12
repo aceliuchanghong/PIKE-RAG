@@ -437,22 +437,28 @@ result = protocol.parse_output(response)
 
 ---
 
+`pikerag`目录下面 的`LLMPoweredRecursiveSplitter` - LLM驱动的递归分割器 _resplit_chunk_and_generate_summary帮我写成伪代码,给出逻辑
+
 ```python
-documents = converter.run(
-    sources=[file_path],
-    meta={"date_added": datetime.now().isoformat()},
-)
+函数 _resplit_chunk_and_generate_summary(文本, 块列表, 当前摘要):
+    # 1. 准备输入数据
+    待处理文本 = 块列表[0] + 块列表[1]  # 合并前两个块以获得更好的上下文
+    
+    # 2. 构建提示词
+    提示词 = 构建分割提示词(待处理文本, 当前摘要)
+    
+    # 3. 调用LLM进行分割和摘要生成
+    LLM响应 = 调用LLM(提示词)
+    
+    # 4. 解析LLM响应
+    新块内容 = 从响应中提取新块()
+    新块摘要 = 从响应中提取新块摘要()
+    下一块摘要 = 从响应中提取下一块摘要()
+    分割位置 = 计算分割位置(文本, 新块内容)
+    
+    # 5. 返回处理结果
+    返回 新块内容, 新块摘要, 下一块摘要, 分割位置
 ```
-
-
-
-
-
-
-
----
-
-
 
 ---
 

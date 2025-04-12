@@ -99,25 +99,31 @@ class RecursiveSentenceSplitter:
 
         return segments
 
-    def split_text(self, text: str) -> List[str]:
+    def _split_text(self, text: str) -> List[str]:
+        """
+        仅测试块的分割
+        """
         doc = self._nlp(text)
         segments = self._nlp_doc_to_texts(doc)
         return segments
 
-    def create_documents(
-        self, texts: List[str], metadatas: Optional[List[dict]] = None
-    ) -> List[Document]:
-        _metadatas = metadatas or [{}] * len(texts)
+    def create_documents(self, document: Document) -> List[Document]:
+        text = document.content
+        meta = document.meta if hasattr(document, "meta") else {}
         documents = []
-        pbar = tqdm(total=len(texts), desc="Splitting texts by sentences")
-        num_workers = min(len(texts), self._num_parallel)
-        for idx, doc in enumerate(
-            self._nlp.pipe(texts, n_process=num_workers, batch_size=32)
-        ):
+        num_workers = min(1, self._num_parallel)
+
+        pbar = tqdm(total=1, desc="Splitting document by sentences")
+
+        # 处理文档
+        for doc in self._nlp.pipe([text], n_process=num_workers, batch_size=32):
             segments = self._nlp_doc_to_texts(doc)
             for segment in segments:
                 documents.append(
-                    Document(content=segment, meta=deepcopy(_metadatas[idx]))
+                    Document(
+                        content=segment,
+                        meta=deepcopy(meta),
+                    )
                 )
             pbar.update(1)
         pbar.close()
@@ -129,15 +135,8 @@ if __name__ == "__main__":
     """
     uv run myrag/my_doc_transformer/splitter/recursive_sentence_splitter.py
     """
-    # if not spacy.require_gpu():
-    #     raise RuntimeError(
-    #         "GPU not available or Spacy failed to initialize GPU support."
-    #     )
-    nlp_sm = spacy.load("zh_core_web_trf")
-    doc_sm = nlp_sm("这是一个测试句子。")
-    print([(token.text, token.pos_, token.dep_) for token in doc_sm])
 
-    file_path = "no_git_oic/test_files/linux环境安装代理VPN的步骤.txt"
+    file_path = "no_git_oic/test_files/AI应用培训01_V2.1_0228.pptx"
     converter = get_loader(file_path)
     results = converter.run(
         sources=[file_path],
@@ -145,20 +144,13 @@ if __name__ == "__main__":
     )
     documents = results["documents"]
 
-    splitter = RecursiveSentenceSplitter(
-        "zh",
-        chunk_size=8,  # 每个块包含12个句子
-        chunk_overlap=4,  # 相邻块之间重叠4个句子
-    )
-    segments = splitter.split_text(documents[0].content)
-    print("\nSegments:")
+    splitter = RecursiveSentenceSplitter("zh", chunk_size=12, chunk_overlap=4)
+    segments = splitter._split_text(documents[0].content)
     for i, segment in enumerate(segments):
         print(f"\nSegment {i+1}:")
         logger.info(colored(f"{segment}", "green"))
 
-    texts = [documents[0].content]
-    meta = [documents[0].meta]
-    documents = splitter.create_documents(texts=texts, metadatas=meta)
+    documents = splitter.create_documents(documents[0])
     for i, doc in enumerate(documents):
         print(f"\n文档 {i+1}:")
         logger.info(colored(f"内容: {doc.content}", "green"))
